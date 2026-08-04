@@ -1,0 +1,10 @@
+# ──────────────────────────────────────────────
+# Global Weather Agent — Python dependencies
+# ──────────────────────────────────────────────
+
+# Google Agent Development Kit (core framework)
+google-adk>=2.0.0
+
+# SSL certificate bundle — required on macOS for HTTPS to Open-Meteo API
+certifi>=2024.0.0
+

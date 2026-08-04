@@ -1,0 +1,519 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Global Weather Agent — Complete Pipeline Design</title>
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap');
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Inter', sans-serif;
+      background: #0a0f1e;
+      color: #e2e8f0;
+      line-height: 1.7;
+    }
+
+    /* ── HEADER ── */
+    header {
+      background: linear-gradient(135deg, #0f172a 0%, #1a1040 100%);
+      border-bottom: 1px solid #1e3a5f;
+      padding: 56px 48px 48px;
+    }
+    .header-inner { max-width: 960px; margin: 0 auto; }
+    .badge {
+      display: inline-block;
+      background: rgba(99,102,241,0.15);
+      border: 1px solid rgba(99,102,241,0.4);
+      color: #a5b4fc;
+      font-size: 11px; font-weight: 600; letter-spacing: 2px;
+      text-transform: uppercase;
+      padding: 5px 14px; border-radius: 100px;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      font-size: 2.4rem; font-weight: 800;
+      color: #f1f5f9; line-height: 1.2;
+      margin-bottom: 12px;
+    }
+    header h1 span { color: #6366f1; }
+    header p {
+      color: #94a3b8; font-size: 15px; max-width: 620px;
+      margin-bottom: 32px;
+    }
+    .meta-row {
+      display: flex; flex-wrap: wrap; gap: 24px;
+    }
+    .meta-item {
+      font-size: 12px; color: #64748b;
+    }
+    .meta-item strong { color: #94a3b8; }
+
+    /* ── LAYOUT ── */
+    main {
+      max-width: 960px;
+      margin: 0 auto;
+      padding: 48px 48px 80px;
+    }
+
+    /* ── SECTION ── */
+    .section { margin-bottom: 64px; }
+    .section-title {
+      display: flex; align-items: center; gap: 12px;
+      border-bottom: 1px solid #1e3a5f;
+      padding-bottom: 14px; margin-bottom: 24px;
+    }
+    .section-num {
+      width: 32px; height: 32px; border-radius: 8px;
+      background: #6366f1;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 700; color: #fff; flex-shrink: 0;
+    }
+    .section-title h2 { font-size: 1.35rem; font-weight: 700; color: #f1f5f9; }
+    .section > p { color: #94a3b8; font-size: 14px; margin-bottom: 20px; }
+
+    /* ── DIAGRAM BOX ── */
+    .diagram-box {
+      background: #0f172a;
+      border: 1px solid #1e3a5f;
+      border-radius: 14px;
+      overflow: hidden;
+    }
+    .diagram-label {
+      padding: 14px 20px;
+      border-bottom: 1px solid #1e3a5f;
+      font-size: 12px; font-weight: 600; color: #6366f1;
+      letter-spacing: 0.5px;
+    }
+    .diagram-label span { color: #475569; font-weight: 400; margin-left: 8px; }
+    .diagram-inner {
+      padding: 28px;
+      background: #060b18;
+      overflow-x: auto;
+    }
+
+    /* ── TABLE ── */
+    table {
+      width: 100%; border-collapse: collapse;
+      font-size: 13.5px; margin-top: 4px;
+    }
+    thead tr { background: rgba(99,102,241,0.08); }
+    th {
+      text-align: left; padding: 11px 14px;
+      font-size: 11px; font-weight: 600;
+      letter-spacing: 1px; text-transform: uppercase;
+      color: #6366f1; border-bottom: 1px solid #1e3a5f;
+    }
+    td {
+      padding: 11px 14px;
+      border-bottom: 1px solid rgba(30,58,95,0.5);
+      color: #cbd5e1; vertical-align: top;
+    }
+    tr:last-child td { border-bottom: none; }
+    tbody tr:hover { background: rgba(255,255,255,0.02); }
+    code {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px;
+      background: rgba(99,102,241,0.12);
+      border: 1px solid rgba(99,102,241,0.2);
+      padding: 2px 6px; border-radius: 4px;
+      color: #a5b4fc;
+    }
+
+    /* ── ALERT NOTES ── */
+    .alerts { display: flex; flex-direction: column; gap: 12px; }
+    .alert {
+      border-radius: 10px; padding: 16px 20px;
+      border-left: 4px solid; font-size: 13.5px;
+    }
+    .alert-note  { background: rgba(99,102,241,0.07);  border-color: #6366f1; }
+    .alert-tip   { background: rgba(8,145,178,0.07);   border-color: #0891b2; }
+    .alert-imp   { background: rgba(234,179,8,0.07);   border-color: #ca8a04; }
+    .alert-title { font-size: 11px; font-weight: 700; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px; }
+    .alert-note .alert-title  { color: #818cf8; }
+    .alert-tip  .alert-title  { color: #22d3ee; }
+    .alert-imp  .alert-title  { color: #fbbf24; }
+    .alert p { color: #94a3b8; margin: 0; }
+
+    /* ── FOOTER ── */
+    footer {
+      border-top: 1px solid #1e3a5f;
+      text-align: center; padding: 32px;
+      font-size: 12px; color: #475569;
+    }
+
+    /* ── PRINT ── */
+    @media print {
+      body { background: #fff; color: #111; }
+      header { background: #fff; border-bottom: 2px solid #6366f1; }
+      header h1 { color: #0f172a; }
+      header h1 span { color: #6366f1; }
+      header p, .meta-item { color: #475569; }
+      .meta-item strong { color: #334155; }
+      .badge { background: #eef2ff; color: #4f46e5; border-color: #c7d2fe; }
+      .diagram-box { background: #f8fafc; border-color: #e2e8f0; page-break-inside: avoid; }
+      .diagram-label { border-color: #e2e8f0; }
+      .diagram-inner { background: #f1f5f9; }
+      .section-num { background: #6366f1; }
+      .section-title { border-color: #e2e8f0; }
+      .section-title h2 { color: #0f172a; }
+      .section > p { color: #475569; }
+      th { color: #6366f1; }
+      td { color: #334155; border-color: #e2e8f0; }
+      code { background: #eef2ff; border-color: #c7d2fe; color: #4f46e5; }
+      .alert-note { background: #eef2ff; }
+      .alert-tip  { background: #ecfeff; }
+      .alert-imp  { background: #fefce8; }
+      .alert p { color: #475569; }
+      footer { border-color: #e2e8f0; color: #94a3b8; }
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <div class="header-inner">
+    <div class="badge">Technical Reference · ADK 2.0</div>
+    <h1>🌍 Global Weather Agent<br/><span>Complete Graph Pipeline Design</span></h1>
+    <p>Full visual reference covering the end-to-end execution graph, internal tool pipeline, intent routing, and data-flow sequence — built on Google ADK 2.0 with Open-Meteo APIs.</p>
+    <div class="meta-row">
+      <div class="meta-item"><strong>Agent:</strong> global_weather_agent</div>
+      <div class="meta-item"><strong>Model:</strong> gemini-3.1-flash-lite</div>
+      <div class="meta-item"><strong>ADK:</strong> ≥ 2.0.0 (installed 2.3.0)</div>
+      <div class="meta-item"><strong>Tools:</strong> 5 function tools</div>
+      <div class="meta-item"><strong>APIs:</strong> Open-Meteo (free, no key)</div>
+      <div class="meta-item"><strong>Date:</strong> <span id="doc-date"></span></div>
+    </div>
+  </div>
+</header>
+
+<main>
+
+  <!-- ══ SECTION 1 ══ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-num">1</div>
+      <h2>Full Pipeline Graph</h2>
+    </div>
+    <p>End-to-end execution: user input → LlmAgent → 5 tool nodes → 3 Open-Meteo REST APIs → formatted response.</p>
+    <div class="diagram-box">
+      <div class="diagram-label">Diagram 1 <span>End-to-End Execution Graph</span></div>
+      <div class="diagram-inner">
+        <div class="mermaid">
+flowchart TD
+    USER(["👤 User Input"])
+    ROOT["🤖 root_agent\n──────────────────\nmodel: gemini-3.1-flash-lite\nADK LlmAgent Node"]
+
+    T1["🌡️ get_current_weather\n─────────────────────\nArgs: city: str\nReturns: temp · humidity\nwind · pressure · condition"]
+    T2["📅 get_weather_forecast\n─────────────────────\nArgs: city: str · days: int\nReturns: 7-day daily\nmax/min · UV · rain prob"]
+    T3["🌍 compare_cities_weather\n──────────────────────\nArgs: cities: list\nReturns: side-by-side\ncurrent weather table"]
+    T4["🕐 get_local_time\n─────────────────\nArgs: city: str\nReturns: local datetime\ntimezone · UTC offset"]
+    T5["🌬️ get_air_quality\n──────────────────\nArgs: city: str\nReturns: PM2.5 · PM10\nNO₂ · O₃ · CO · AQI"]
+
+    GEO["🗺️ Open-Meteo\nGeocoding API\ngeocoding-api.open-meteo.com"]
+    WX["☁️ Open-Meteo\nWeather API\napi.open-meteo.com"]
+    AQ["💨 Open-Meteo\nAir Quality API\nair-quality-api.open-meteo.com"]
+
+    RESP(["💬 Formatted\nNatural Language\nResponse"])
+
+    USER -->|"natural language query"| ROOT
+    ROOT -->|"tool call"| T1
+    ROOT -->|"tool call"| T2
+    ROOT -->|"tool call"| T3
+    ROOT -->|"tool call"| T4
+    ROOT -->|"tool call"| T5
+
+    T1 -->|"geocode city"| GEO
+    T2 -->|"geocode city"| GEO
+    T3 -->|"geocode each city"| GEO
+    T4 -->|"geocode city"| GEO
+    T5 -->|"geocode city"| GEO
+
+    T1 -->|"fetch current weather"| WX
+    T2 -->|"fetch daily forecast"| WX
+    T3 -->|"fetch current x N"| WX
+    T5 -->|"fetch AQ data"| AQ
+
+    T1 -->|"tool response"| ROOT
+    T2 -->|"tool response"| ROOT
+    T3 -->|"tool response"| ROOT
+    T4 -->|"tool response"| ROOT
+    T5 -->|"tool response"| ROOT
+
+    ROOT -->|"synthesise & format"| RESP
+
+    style USER fill:#6366f1,color:#fff,stroke:#4f46e5
+    style RESP fill:#6366f1,color:#fff,stroke:#4f46e5
+    style ROOT fill:#0f172a,color:#e2e8f0,stroke:#6366f1
+    style T1 fill:#0e7490,color:#fff,stroke:#0891b2
+    style T2 fill:#0e7490,color:#fff,stroke:#0891b2
+    style T3 fill:#0e7490,color:#fff,stroke:#0891b2
+    style T4 fill:#0e7490,color:#fff,stroke:#0891b2
+    style T5 fill:#0e7490,color:#fff,stroke:#0891b2
+    style GEO fill:#166534,color:#fff,stroke:#16a34a
+    style WX  fill:#166534,color:#fff,stroke:#16a34a
+    style AQ  fill:#166534,color:#fff,stroke:#16a34a
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 2 ══ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-num">2</div>
+      <h2>Internal Tool Pipeline</h2>
+    </div>
+    <p>Every tool function follows the same internal 3-step pipeline before returning a result to the agent.</p>
+    <div class="diagram-box">
+      <div class="diagram-label">Diagram 2 <span>Per-Tool Execution Steps</span></div>
+      <div class="diagram-inner">
+        <div class="mermaid">
+flowchart LR
+    IN(["Tool Called\nby LLM"])
+    GC["Step 1 — Geocode\n_geocode(city)\n→ lat · lon · timezone\n   country · name"]
+    FETCH["Step 2 — Fetch Data\n_fetch_json(url)\nHTTP GET + retry x 2\ntimeout: 10s · SSL: certifi"]
+    PARSE["Step 3 — Parse & Enrich\n• WMO code → description\n• degrees → compass bearing\n• UV index → advisory\n• °C → °F conversion\n• AQI → health category"]
+    OUT(["Return dict\n{status, report}"])
+
+    IN --> GC --> FETCH --> PARSE --> OUT
+
+    style IN    fill:#6366f1,color:#fff,stroke:#4f46e5
+    style OUT   fill:#6366f1,color:#fff,stroke:#4f46e5
+    style GC    fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style FETCH fill:#1e293b,color:#e2e8f0,stroke:#475569
+    style PARSE fill:#1e293b,color:#e2e8f0,stroke:#475569
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 3 ══ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-num">3</div>
+      <h2>Tool Routing Decision Map</h2>
+    </div>
+    <p>How the Gemini LLM classifies user intent and routes execution to the correct tool(s). Compound queries trigger multiple tools.</p>
+    <div class="diagram-box">
+      <div class="diagram-label">Diagram 3 <span>Intent → Tool Routing</span></div>
+      <div class="diagram-inner">
+        <div class="mermaid">
+flowchart TD
+    Q(["User Query"])
+    D{{"Intent\nClassification\nby Gemini LLM"}}
+
+    T1["get_current_weather"]
+    T2["get_weather_forecast"]
+    T3["compare_cities_weather"]
+    T4["get_local_time"]
+    T5["get_air_quality"]
+    MULTI["Multiple tools\ncalled in sequence\nor in parallel"]
+
+    Q --> D
+    D -->|"'weather in X'\n'what's it like in X'"| T1
+    D -->|"'forecast / next N days'\n'this week in X'"| T2
+    D -->|"'compare X and Y'\n'hottest of cities'"| T3
+    D -->|"'what time is it in X'\n'local time in X'"| T4
+    D -->|"'air quality in X'\n'AQI / pollution'"| T5
+    D -->|"compound query\ne.g. weather + AQI"| MULTI
+
+    style Q     fill:#6366f1,color:#fff,stroke:#4f46e5
+    style D     fill:#7c3aed,color:#fff,stroke:#6d28d9
+    style T1    fill:#0e7490,color:#fff,stroke:#0891b2
+    style T2    fill:#0e7490,color:#fff,stroke:#0891b2
+    style T3    fill:#0e7490,color:#fff,stroke:#0891b2
+    style T4    fill:#0e7490,color:#fff,stroke:#0891b2
+    style T5    fill:#0e7490,color:#fff,stroke:#0891b2
+    style MULTI fill:#9333ea,color:#fff,stroke:#7e22ce
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 4 ══ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-num">4</div>
+      <h2>Data Flow Sequence Diagram</h2>
+    </div>
+    <p>A full actor-level trace of a real query — every network call, data transformation, and message exchange shown in order.</p>
+    <div class="diagram-box">
+      <div class="diagram-label">Diagram 4 <span>Sequence: "What's the weather in Mumbai?"</span></div>
+      <div class="diagram-inner">
+        <div class="mermaid">
+sequenceDiagram
+    actor User
+    participant Agent as 🤖 LlmAgent (root_agent)
+    participant Tool as 🔧 get_current_weather
+    participant GeoAPI as 🗺️ Geocoding API
+    participant WxAPI as ☁️ Weather API
+
+    User->>Agent: "What's the weather in Mumbai?"
+    Agent->>Tool: get_current_weather("Mumbai")
+    Tool->>GeoAPI: GET /v1/search?name=Mumbai&count=1
+    GeoAPI-->>Tool: {lat:19.07, lon:72.87, timezone:"Asia/Kolkata", country:"India"}
+    Tool->>WxAPI: GET /v1/forecast?lat=19.07&lon=72.87&current=temperature_2m,...
+    WxAPI-->>Tool: {current:{temperature_2m:31, weather_code:2, wind_speed:18,...}}
+    Tool-->>Tool: enrich: WMO 2→"Partly cloudy ⛅", 31°C→87.8°F, wind→"NW (315°)"
+    Tool-->>Agent: {status:"success", report:{temp_c:31, temp_f:87.8, condition:"Partly cloudy ⛅",...}}
+    Agent->>User: "☀️ Mumbai is 31°C (87.8°F), partly cloudy. Wind is NW at 18 km/h..."
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 5 ══ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-num">5</div>
+      <h2>Node &amp; Edge Summary</h2>
+    </div>
+    <div class="diagram-box">
+      <div class="diagram-inner" style="padding:0; background: transparent;">
+        <table>
+          <thead>
+            <tr>
+              <th>Node / Component</th>
+              <th>Type</th>
+              <th>Inputs</th>
+              <th>Outputs</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><code>root_agent</code></td>
+              <td>LlmAgent (ADK 2.x)</td>
+              <td>User message</td>
+              <td>Tool calls / final text</td>
+            </tr>
+            <tr>
+              <td><code>get_current_weather</code></td>
+              <td>FunctionTool</td>
+              <td><code>city: str</code></td>
+              <td>Temp, humidity, wind, pressure, condition</td>
+            </tr>
+            <tr>
+              <td><code>get_weather_forecast</code></td>
+              <td>FunctionTool</td>
+              <td><code>city: str, days: int</code></td>
+              <td>7-day daily: max/min, rain prob, UV, sunrise/sunset</td>
+            </tr>
+            <tr>
+              <td><code>compare_cities_weather</code></td>
+              <td>FunctionTool</td>
+              <td><code>cities: list[str]</code></td>
+              <td>Side-by-side current weather per city</td>
+            </tr>
+            <tr>
+              <td><code>get_local_time</code></td>
+              <td>FunctionTool</td>
+              <td><code>city: str</code></td>
+              <td>Local date, time, timezone, UTC offset</td>
+            </tr>
+            <tr>
+              <td><code>get_air_quality</code></td>
+              <td>FunctionTool</td>
+              <td><code>city: str</code></td>
+              <td>PM2.5, PM10, NO₂, O₃, CO, European AQI + label</td>
+            </tr>
+            <tr>
+              <td><code>_geocode(city)</code></td>
+              <td>Internal Helper</td>
+              <td><code>city: str</code></td>
+              <td><code>{lat, lon, name, country, timezone}</code></td>
+            </tr>
+            <tr>
+              <td><code>_fetch_json(url)</code></td>
+              <td>Internal Helper</td>
+              <td><code>url: str</code>, retries, timeout</td>
+              <td>Parsed JSON dict or <code>None</code></td>
+            </tr>
+            <tr>
+              <td>Open-Meteo Geocoding API</td>
+              <td>External REST</td>
+              <td>City name, language, count</td>
+              <td>lat, lon, timezone, country</td>
+            </tr>
+            <tr>
+              <td>Open-Meteo Weather API</td>
+              <td>External REST</td>
+              <td>lat, lon, fields, timezone</td>
+              <td>Current conditions or daily forecast JSON</td>
+            </tr>
+            <tr>
+              <td>Open-Meteo Air Quality API</td>
+              <td>External REST</td>
+              <td>lat, lon, current AQ fields</td>
+              <td>PM2.5, PM10, NO₂, O₃, CO, AQI JSON</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ══ SECTION 6 ══ -->
+  <div class="section">
+    <div class="section-title">
+      <div class="section-num">6</div>
+      <h2>ADK 2.0 Architecture Notes</h2>
+    </div>
+    <div class="alerts">
+      <div class="alert alert-note">
+        <div class="alert-title">📐 Graph Execution Model</div>
+        <p>In ADK 2.0 the <code>Agent</code> is a node in a workflow graph. Tool calls are edges to child nodes. The LLM decides routing dynamically — no static edges needed for single-agent setups.</p>
+      </div>
+      <div class="alert alert-tip">
+        <div class="alert-title">⚡ Parallel Tool Calls</div>
+        <p>For compound queries (e.g. "weather + AQI in Delhi"), ADK 2.x resolves tool call unions in parallel, reducing total latency significantly.</p>
+      </div>
+      <div class="alert alert-imp">
+        <div class="alert-title">🔄 Automatic Retries &amp; Exception Handling</div>
+        <p>ADK 2.0 has native automatic retries. Tool functions use narrow <code>except (KeyError, TypeError, ValueError)</code> clauses so unexpected errors propagate up to the framework's retry handler instead of being silently swallowed.</p>
+      </div>
+    </div>
+  </div>
+
+</main>
+
+<footer>
+  Global Weather Agent &nbsp;·&nbsp; Google ADK 2.3.0 &nbsp;·&nbsp; Open-Meteo API (free · no key required)
+  &nbsp;·&nbsp; Model: gemini-3.1-flash-lite &nbsp;·&nbsp; Generated: <span id="footer-date"></span>
+</footer>
+
+<script>
+  const d = new Date().toLocaleDateString('en-IN', { year:'numeric', month:'long', day:'numeric' });
+  document.getElementById('doc-date').textContent = d;
+  document.getElementById('footer-date').textContent = d;
+
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'dark',
+    themeVariables: {
+      primaryColor: '#0e7490',
+      primaryTextColor: '#e2e8f0',
+      primaryBorderColor: '#0891b2',
+      lineColor: '#475569',
+      secondaryColor: '#1e293b',
+      tertiaryColor: '#0f172a',
+      background: '#060b18',
+      mainBkg: '#0f172a',
+      edgeLabelBackground: '#1e293b',
+      actorBkg: '#0f172a',
+      actorBorder: '#6366f1',
+      actorTextColor: '#e2e8f0',
+      signalColor: '#94a3b8',
+      signalTextColor: '#e2e8f0',
+      noteBkgColor: '#1e293b',
+      noteTextColor: '#e2e8f0',
+    },
+    flowchart: { curve: 'basis', htmlLabels: true },
+    sequence: { mirrorActors: false, useMaxWidth: true }
+  });
+</script>
+</body>
+</html>
